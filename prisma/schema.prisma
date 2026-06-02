@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  username     String   @unique
+  passwordSalt String
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  trips         Trip[]
+  refreshTokens RefreshToken[]
+  documents     Document[]
+
+  @@index([username])
+}
+
+model RefreshToken {
+  id        String   @id // jti
+  userId    String
+  tokenHash String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Trip {
+  id          String   @id @default(uuid())
+  ownerUserId String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner     User            @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  locations TripLocation[]
+
+  @@index([ownerUserId, createdAt(sort: Desc)])
+}
+
+model TripLocation {
+  id        String   @id @default(uuid())
+  tripId    String
+  lat       Float
+  lon       Float
+  acc       Float?
+  ts        BigInt
+  createdAt DateTime @default(now())
+
+  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId, ts(sort: Asc)])
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  mime      String
+  size      Int
+  sha256    String
+  createdAt DateTime @default(now())
+
+  encAlg String
+  encIv  String
+  encTag String
+  encData Bytes
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+}
